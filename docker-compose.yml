@@ -1,0 +1,80 @@
+version: "3.7"
+
+
+services:
+  app:
+    build:
+      context: docker-compose/php-fpm
+    volumes:
+      - ~/.ssh:/home/${USER}/.ssh:rw
+      - ./src:/var/www
+    depends_on:
+      - db
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
+  node:
+    build:
+      context: ./docker-compose/node
+    working_dir: /var/www
+    volumes:
+      - ./src/:/var/www
+
+  db:
+    image: postgres
+    restart: unless-stopped
+    env_file:
+      - ./src/.env
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-social}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_USER: ${DB_USERNAME:-super}
+    volumes:
+      - ./docker-compose/postgres-data:/var/lib/postgres/data
+    ports:
+      - "5432:5432"
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "5173:5173"
+    volumes:
+      - ./src:/var/www
+      - ./docker-compose/nginx:/etc/nginx/conf.d/
+
+  cache:
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning --requirepass eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81
+    volumes:
+      - ./docker-compose/cache:/data
+
+  pgadmin:
+    container_name: pgadmin4_container
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "5050:5050"
+
+  rabbitmq:
+    image: rabbitmq:3.10.7-management
+    hostname: rabbitmq
+    restart: always
+    env_file:
+      - ./src/.env
+    environment:
+      - RABBITMQ_DEFAULT_USER=${DB_USER}
+      - RABBITMQ_DEFAULT_PASS=${DB_PASSWORD}
+    ports:
+      - 15672:15672
+
+networks:
+  rabbitmq_go_net:
+    driver: bridge
