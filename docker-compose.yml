@@ -14,9 +14,9 @@ services:
       - 'host.docker.internal:host-gateway'
 
   node:
-    build:
-      context: ./docker-compose/node
+    image: node:16-alpine
     working_dir: /var/www
+    user: 1000:1000
     volumes:
       - ./src/:/var/www
 
@@ -60,7 +60,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: root
     ports:
-      - "5050:5050"
+      - "5050:80"
 
   rabbitmq:
     image: rabbitmq:3.10.7-management
